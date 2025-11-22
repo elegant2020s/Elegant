@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Dynamic Gallery</title>
+
+  <script type="module" src="https://unpkg.com/photoswipe/dist/photoswipe.esm.js"></script>
+  <script type="module" src="https://unpkg.com/photoswipe/dist/photoswipe-lightbox.esm.js"></script>
+
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    .category-title { font-size: 24px; margin-top: 20px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; }
+    .thumb { width: 100%; cursor: pointer; border-radius: 8px; }
+    .item-label { font-size: 14px; text-align: center; margin-top: 6px; }
+  </style>
+</head>
+
+<body>
+  <h1>Dynamic Gallery</h1>
+  <div id="gallery"></div>
+
+<script>
+const USER = "YOUR_USERNAME";
+const REPO = "YOUR_REPO";
+const BASE = `https://api.github.com/repos/${USER}/${REPO}/contents/gallery`;
+
+// Fetch JSON from GitHub API
+async function listDir(path) {
+  const res = await fetch(path);
+  return await res.json();
+}
+
+// Turn folder name into a nicer label
+function prettify(name) {
+  return name.replace(/[_-]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+// Build everything
+async function buildGallery() {
+  const container = document.getElementById("gallery");
+
+  // List categories
+  const categories = await listDir(BASE);
+
+  for (const cat of categories) {
+    if (cat.type !== "dir") continue;
+
+    const catDiv = document.createElement("div");
+    catDiv.innerHTML = `<div class="category-title">${prettify(cat.name)}</div>`;
+
+    const itemGrid = document.createElement("div");
+    itemGrid.className = "grid";
+
+    // List items inside this category
+    const items = await listDir(cat.url);
+
+    for (const item of items) {
+      if (item.type !== "dir") continue;
+
+      // List images inside item folder
+      const images = await listDir(item.url);
+      const imageFiles = images.filter(f => f.type === "file");
+
+      if (imageFiles.length === 0) continue;
+
+      const thumbSrc = imageFiles[0].download_url; // first image = thumbnail
+
+      const itemDiv = document.createElement("div");
+      itemDiv.innerHTML = `
+        <img class="thumb" src="${thumbSrc}" onclick="openItem('${item.url.replace(/'/g,'\\\'')}')">
+        <div class="item-label">${prettify(item.name)}</div>
+      `;
+      itemGrid.appendChild(itemDiv);
+    }
+
+    catDiv.appendChild(itemGrid);
+    container.appendChild(catDiv);
+  }
+}
+
+let activeImages = [];
+
+// Open item gallery
+async function openItem(itemUrl) {
+  const images = await listDir(itemUrl);
+  const files = images.filter(i => i.type === "file");
+
+  activeImages = files.map(f => ({
+    src: f.download_url,
+    width: 2000,
+    height: 2000
+  }));
+
+  const lightbox = new PhotoSwipeLightbox({
+    dataSource: activeImages,
+    pswpModule: () => import('https://unpkg.com/photoswipe/dist/photoswipe.esm.js')
+  });
+
+  lightbox.init();
+  lightbox.loadAndOpen(0);
+}
+
+buildGallery();
+</script>
+
+</body>
+</html>

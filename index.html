@@ -23,7 +23,7 @@
 <script>
 const USER = "elegant2020s";
 const REPO = "Elegant";
-const BASE = `https://api.github.com/repos/elegant2020s/Elegant/contents/gallery`;
+const BASE = `https://api.github.com/repos/${USER}/${REPO}/contents/gallery`;
 
 // Fetch JSON from GitHub API
 async function listDir(path) {
@@ -106,5 +106,6 @@ buildGallery();
 
 </body>
 </html>
+
 
 
